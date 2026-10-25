@@ -1,0 +1,69 @@
+[
+  {
+    "test": "test_00_control_valid_token_works",
+    "requirement": "CONTROL (valid token must work)",
+    "naive": "pass",
+    "hardened": "pass",
+    "control": true
+  },
+  {
+    "test": "test_01_no_token_401_with_resource_metadata",
+    "requirement": "401 + WWW-Authenticate resource_metadata (RFC 9728 s5.1)",
+    "naive": "fail",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_02_prm_endpoint_correct",
+    "requirement": "PRM served, authorization_servers present (RFC 9728)",
+    "naive": "fail",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_03_expired_token_401",
+    "requirement": "expired token -> 401",
+    "naive": "pass",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_04_wrong_audience_rejected",
+    "requirement": "audience validation (RFC 8707 / MCP security considerations)",
+    "naive": "fail",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_05_wrong_issuer_rejected",
+    "requirement": "token validation per OAuth 2.1 s5.2: issuer",
+    "naive": "fail",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_06_bad_signature_and_alg_none_rejected",
+    "requirement": "token validation per OAuth 2.1 s5.2: signature / alg none",
+    "naive": "pass",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_07_insufficient_scope_403",
+    "requirement": "403 insufficient_scope + scope + resource_metadata",
+    "naive": "fail",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_08_tools_list_not_anonymous",
+    "requirement": "auth on every request (no anonymous tools/list)",
+    "naive": "fail",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_09_no_token_passthrough",
+    "requirement": "MUST NOT pass through client token downstream",
+    "naive": "fail",
+    "hardened": "pass"
+  },
+  {
+    "test": "test_10_token_in_query_string_rejected",
+    "requirement": "access token MUST NOT be in URI query string",
+    "naive": "fail",
+    "hardened": "pass"
+  }
+]

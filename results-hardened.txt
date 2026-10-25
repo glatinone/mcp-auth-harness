@@ -1,0 +1,16 @@
+============================= test session starts =============================
+collecting ... collected 11 items
+
+tests/test_auth.py::test_00_control_valid_token_works PASSED             [  9%]
+tests/test_auth.py::test_01_no_token_401_with_resource_metadata PASSED   [ 18%]
+tests/test_auth.py::test_02_prm_endpoint_correct PASSED                  [ 27%]
+tests/test_auth.py::test_03_expired_token_401 PASSED                     [ 36%]
+tests/test_auth.py::test_04_wrong_audience_rejected PASSED               [ 45%]
+tests/test_auth.py::test_05_wrong_issuer_rejected PASSED                 [ 54%]
+tests/test_auth.py::test_06_bad_signature_and_alg_none_rejected PASSED   [ 63%]
+tests/test_auth.py::test_07_insufficient_scope_403 PASSED                [ 72%]
+tests/test_auth.py::test_08_tools_list_not_anonymous PASSED              [ 81%]
+tests/test_auth.py::test_09_no_token_passthrough PASSED                  [ 90%]
+tests/test_auth.py::test_10_token_in_query_string_rejected PASSED        [100%]
+
+============================= 11 passed in 3.20s ==============================

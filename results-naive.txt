@@ -1,0 +1,142 @@
+============================= test session starts =============================
+collecting ... collected 11 items
+
+tests/test_auth.py::test_00_control_valid_token_works PASSED             [  9%]
+tests/test_auth.py::test_01_no_token_401_with_resource_metadata FAILED   [ 18%]
+tests/test_auth.py::test_02_prm_endpoint_correct FAILED                  [ 27%]
+tests/test_auth.py::test_03_expired_token_401 PASSED                     [ 36%]
+tests/test_auth.py::test_04_wrong_audience_rejected FAILED               [ 45%]
+tests/test_auth.py::test_05_wrong_issuer_rejected FAILED                 [ 54%]
+tests/test_auth.py::test_06_bad_signature_and_alg_none_rejected PASSED   [ 63%]
+tests/test_auth.py::test_07_insufficient_scope_403 FAILED                [ 72%]
+tests/test_auth.py::test_08_tools_list_not_anonymous FAILED              [ 81%]
+tests/test_auth.py::test_09_no_token_passthrough FAILED                  [ 90%]
+tests/test_auth.py::test_10_token_in_query_string_rejected FAILED        [100%]
+
+================================== FAILURES ===================================
+_________________ test_01_no_token_401_with_resource_metadata _________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_01_no_token_401_with_resource_metadata(env):
+        """R1: 'Include the resource metadata URL in the WWW-Authenticate HTTP header under resource_metadata
+        when returning 401 Unauthorized responses'."""
+        r = rpc(env, "tools/call", {"name": "read_notes", "arguments": {}})
+        assert r.status_code == 401
+        wa = r.headers.get("WWW-Authenticate", "")
+>       assert wa.lower().startswith("bearer") and re.search(r'resource_metadata="https?://[^"]+"', wa), wa
+E       AssertionError: 
+E       assert (False)
+E        +  where False = <built-in method startswith of str object at 0x00007FFE37836790>('bearer')
+E        +    where <built-in method startswith of str object at 0x00007FFE37836790> = ''.startswith
+E        +      where '' = <built-in method lower of str object at 0x00007FFE37836790>()
+E        +        where <built-in method lower of str object at 0x00007FFE37836790> = ''.lower
+
+tests\test_auth.py:29: AssertionError
+________________________ test_02_prm_endpoint_correct _________________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_02_prm_endpoint_correct(env):
+        """R2: 'MCP servers MUST implement OAuth 2.0 Protected Resource Metadata (RFC9728)... MUST include the
+        authorization_servers field containing at least one authorization server.'"""
+        r = httpx.get(env.base + "/.well-known/oauth-protected-resource/mcp")
+>       assert r.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests\test_auth.py:36: AssertionError
+_______________________ test_04_wrong_audience_rejected _______________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_04_wrong_audience_rejected(env):
+        """R4: 'MCP servers MUST validate that access tokens were issued specifically for them as the intended
+        audience' / 'MUST reject tokens that do not include them in the audience claim'."""
+        r = rpc(env, "tools/call", {"name": "read_notes", "arguments": {}},
+                token=tok(env, aud="http://127.0.0.1:1/some-other-mcp"))
+>       assert r.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_auth.py:53: AssertionError
+________________________ test_05_wrong_issuer_rejected ________________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_05_wrong_issuer_rejected(env):
+        """R5: 'MCP servers MUST validate access tokens as described in OAuth 2.1 Section 5.2' (issuer must be
+        the server's authorization server, from PRM authorization_servers)."""
+        r = rpc(env, "tools/call", {"name": "read_notes", "arguments": {}},
+                token=tok(env, iss="https://evil.example"))
+>       assert r.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_auth.py:61: AssertionError
+_______________________ test_07_insufficient_scope_403 ________________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_07_insufficient_scope_403(env):
+        """R7: 'the server SHOULD respond with HTTP 403 Forbidden ... WWW-Authenticate header ... error="insufficient_scope"
+        ... scope="required_scope"'."""
+        r = rpc(env, "tools/call", {"name": "delete_note", "arguments": {"id": "2"}},
+                token=tok(env, scope="notes:read"))
+>       assert r.status_code == 403
+E       assert 200 == 403
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_auth.py:78: AssertionError
+______________________ test_08_tools_list_not_anonymous _______________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_08_tools_list_not_anonymous(env):
+        """R8: 'Servers SHOULD implement proper authentication for all connections' and 'authorization MUST be
+        included in every HTTP request from client to server' -> anonymous tools/list gets 401."""
+        r = rpc(env, "tools/list")
+>       assert r.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_auth.py:87: AssertionError
+________________________ test_09_no_token_passthrough _________________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_09_no_token_passthrough(env):
+        """R9: 'The MCP server MUST NOT pass through the token it received from the MCP client.'"""
+        t = tok(env)
+        env.ds.seen.clear()
+        r = rpc(env, "tools/call", {"name": "read_notes", "arguments": {}}, token=t)
+        assert r.status_code == 200
+        assert env.ds.seen, "downstream was not called"
+>       assert all(a != f"Bearer {t}" for _, _, a in env.ds.seen), env.ds.seen
+E       AssertionError: [('GET', '/notes', 'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InN0dWIta2V5LTEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjUwNzM3Iiwic3ViIjoiYWxpY2UiLCJhdWQiOiJodHRwOi8vMTI3LjAuMC4xOjUwNzM5L21jcCIsInNjb3BlIjoibm90ZXM6cmVhZCBub3Rlczp3cml0ZSIsImlhdCI6MTc5MjkxOTg5NSwiZXhwIjoxNzkyOTIwMTk1LCJqdGkiOiJlNzVhODNiNS1lYjA1LTQwYTEtODJhOS00YjhkNzg4NTA4MTEifQ.gusprq365Tv5vnecvCisManY2psx6FILnceJ_NaS7Q48v7PWWR4OtPXJ9pS1sUkUPaQPnARYv3vlrMXaUP7o8BJRWkPeHswKjHgi9SnHsEwq1krDeCAm5D_A-_x85ZxxAM6krNOpXOhJ9-L8XQUsb2kvX0RT1TnYfzcAa_N3TlN4dwb_iMEJku6gxCCv94uUJRCxBpAolSS6q3EIsu-Y1YVPHQHlYz0AS_EZGhsXRpu9xKaKEz3ijkyrDPGav42Hy_KhKEJqApn-Uzou8io3eohFeLcQZAhCOhZgJWv2uHSTt-xhzK9IAuS9gQ4_NsSaVvIq0uqmJLV1tt0CA7S64Q')]
+E       assert False
+E        +  where False = all(<generator object test_09_no_token_passthrough.<locals>.<genexpr> at 0x000001F6DF808220>)
+
+tests\test_auth.py:97: AssertionError
+___________________ test_10_token_in_query_string_rejected ____________________
+
+env = <conftest.Env object at 0x000001F6DE2F67B0>
+
+    def test_10_token_in_query_string_rejected(env):
+        """R10: 'Access tokens MUST NOT be included in the URI query string.' (token only in query, none in header)"""
+        r = rpc(env, "tools/call", {"name": "read_notes", "arguments": {}}, query=f"?access_token={tok(env)}")
+>       assert r.status_code in (400, 401)
+E       assert 200 in (400, 401)
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_auth.py:103: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_auth.py::test_01_no_token_401_with_resource_metadata - Asse...
+FAILED tests/test_auth.py::test_02_prm_endpoint_correct - assert 404 == 200
+FAILED tests/test_auth.py::test_04_wrong_audience_rejected - assert 200 == 401
+FAILED tests/test_auth.py::test_05_wrong_issuer_rejected - assert 200 == 401
+FAILED tests/test_auth.py::test_07_insufficient_scope_403 - assert 200 == 403
+FAILED tests/test_auth.py::test_08_tools_list_not_anonymous - assert 200 == 401
+FAILED tests/test_auth.py::test_09_no_token_passthrough - AssertionError: [('...
+FAILED tests/test_auth.py::test_10_token_in_query_string_rejected - assert 20...
+========================= 8 failed, 3 passed in 3.46s =========================
