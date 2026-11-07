@@ -1,5 +1,7 @@
 # mcp-auth-harness
 
+[![CI](https://github.com/glatinone/mcp-auth-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/glatinone/mcp-auth-harness/actions/workflows/ci.yml)
+
 A small pytest harness that checks an HTTP MCP server against the authorization requirements of the MCP 2026-07-28 revision, plus two reference servers: a deliberately naive one and a hardened one. See `research.md` for the exact spec lines and `results.json` for the scoreboard. Write-up: [I wrote an MCP server auth test harness for the 2026-07-28 spec](https://www.kielltampubolon.id/writing/i-wrote-an-mcp-server-auth-test-harness-for-the-2026-07-28-spec-here-is-what-broke-first/).
 
 ## Results

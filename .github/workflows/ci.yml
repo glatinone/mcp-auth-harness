@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scoreboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: uv sync
+
+      # The naive server is a deliberate strawman: most requirement tests are
+      # expected to fail there, so its pytest exit code is not the gate.
+      - name: Run tests against the naive server
+        run: MCP_MODE=naive uv run pytest tests -v --no-header > results-naive.txt || true
+
+      # The hardened server must pass every test, so its exit code is the gate.
+      - name: Run tests against the hardened server
+        run: MCP_MODE=hardened uv run pytest tests -v --no-header | tee results-hardened.txt
+
+      - name: Build results.json
+        run: uv run python make_results.py
+
+      # The gate is the documented scoreboard in the README: the control test
+      # passes on both servers, naive passes 2 of 10, hardened passes 10 of 10.
+      - name: Assert the documented scoreboard
+        run: |
+          cat results-naive.txt
+          uv run python - <<'PY'
+          import json
+          rows = json.load(open("results.json"))
+          control = [r for r in rows if r.get("control")]
+          spec = [r for r in rows if not r.get("control")]
+          naive = sum(r["naive"] == "pass" for r in spec)
+          hardened = sum(r["hardened"] == "pass" for r in spec)
+          print(f"control: naive={control[0]['naive']} hardened={control[0]['hardened']}")
+          print(f"requirements: naive {naive}/{len(spec)}, hardened {hardened}/{len(spec)}")
+          assert len(control) == 1 and control[0]["naive"] == control[0]["hardened"] == "pass", "control test must pass on both servers"
+          assert len(spec) == 10, f"expected 10 requirement tests, found {len(spec)}"
+          assert naive == 2, f"naive should pass 2/10 requirement tests, got {naive}"
+          assert hardened == 10, f"hardened should pass 10/10 requirement tests, got {hardened}"
+          PY
+
+      - name: Check committed results.json matches this run
+        run: git diff --exit-code results.json
